@@ -7,12 +7,12 @@ import {
   Welcome,
   useXAgent,
   useXChat,
-  Suggestion
+  Suggestion,
+  AttachmentsProps
 } from '@ant-design/x';
 import { createStyles } from 'antd-style';
 import React, { useEffect } from 'react';
-import { ApiOutlined, LinkOutlined, SearchOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
-import AttachmentSender from '../components/AttachmentSender';
+import { ApiOutlined, SearchOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
 import {
   CloudUploadOutlined,
   CommentOutlined,
@@ -26,6 +26,8 @@ import {
   SmileOutlined,
 } from '@ant-design/icons';
 import { Badge, Button, Divider, Switch, Typography, Flex, type GetProp, Space, theme } from 'antd';
+import { IFileType, getFileExtByName, getFileTypeByName } from '../Utils/utils'
+import { RcFile } from 'antd/es/upload'
 
 const renderTitle = (icon: React.ReactElement, title: string) => (
   <Space align="start">
@@ -41,9 +43,15 @@ const defaultConversationsItems = [
   },
 ];
 
+
+/**
+ * Dify 支持的文件类型和对应的格式
+ */
+export const FileTypeMap: Map<IFileType, string[]> = new Map()
+
+
+
 type SuggestionItems = Exclude<GetProp<typeof Suggestion, 'items'>, () => void>;
-
-
 const suggestions: SuggestionItems = [
   { label: 'Write a report', value: 'report' },
   { label: 'Draw a picture', value: 'draw' },
@@ -333,6 +341,65 @@ const Independent: React.FC = () => {
     </Space>
   );
 
+  const [files, setFiles] = React.useState<GetProp<AttachmentsProps, 'items'>>([])
+  const [fileIdMap, setFileIdMap] = React.useState<Map<string, string>>(new Map())
+  const handleUpload = async (file: RcFile) => {
+    const prevFiles = [...files]
+
+    const fileBaseInfo: GetProp<AttachmentsProps, 'items'>[number] = {
+      uid: file.uid,
+      name: file.name,
+      status: 'uploading',
+      size: file.size,
+      type: file.type,
+      originFileObj: file,
+    }
+    // 模拟上传进度
+    const mockLoadingProgress = () => {
+      let percent = 0
+      setFiles([
+        ...prevFiles,
+        {
+          ...fileBaseInfo,
+          percent: percent,
+        },
+      ])
+      const interval = setInterval(() => {
+        if (percent >= 99) {
+          clearInterval(interval)
+          return
+        }
+        percent = percent + 1
+        setFiles([
+          ...prevFiles,
+          {
+            ...fileBaseInfo,
+            percent,
+          },
+        ])
+      }, 100)
+      return {
+        clear: () => clearInterval(interval),
+      }
+    }
+    const { clear } = mockLoadingProgress()
+
+    // const result = await uploadFileApi(file)
+    // clear()
+    // setFiles([
+    // 	...prevFiles,
+    // 	{
+    // 		...fileBaseInfo,
+    // 		percent: 100,
+    // 		status: 'done',
+    // 	},
+    // ])
+    // setFileIdMap(prevMap => {
+    // 	const nextMap = new Map(prevMap)
+    // 	nextMap.set(file.uid, result.id)
+    // 	return nextMap
+    // })
+  }
   const handleSend = (text: string, files: any[]) => {
     console.log('Message:', text);
     console.log('Files:', files);
@@ -363,7 +430,22 @@ const Independent: React.FC = () => {
       }}
     >
       <Attachments
-        beforeUpload={() => false}
+        beforeUpload={
+          async file => {
+            // 校验文件类型
+            // 自定义上传
+
+            const ext = getFileExtByName(file.name)
+            // 校验文件类型
+            // if (allowedFileTypes.length > 0 && !allowedFileTypes.includes(ext!)) {
+            //   message.error(`不支持的文件类型: ${ext}`)
+            //   return false
+            // }
+
+            handleUpload(file)
+            return false
+          }
+        }
         items={attachedFiles}
         onChange={handleFileChange}
         placeholder={(type) =>
@@ -434,7 +516,10 @@ const Independent: React.FC = () => {
           {({ onTrigger, onKeyDown }) => {
             return (
               <Sender
-                //header={senderHeader}
+                header={senderHeader}
+                prefix={
+                  attachmentsNode
+                }
                 value={content}
                 onChange={
                   (nextVal) => {
@@ -453,7 +538,7 @@ const Independent: React.FC = () => {
                   return (
                     <Flex justify="space-between" align="center">
                       <Flex gap="small" align="center">
-                        <Button style={iconStyle} type="text" icon={<LinkOutlined />} />
+                        {/* <Button style={iconStyle} type="text" icon={<LinkOutlined />} /> */}
                         {/* <AttachmentSender style={iconStyle} onSubmit={handleSend}/> */}
                         <Divider type="vertical" />
                         Deep Thinking
