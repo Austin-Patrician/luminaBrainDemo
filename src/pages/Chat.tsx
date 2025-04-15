@@ -453,8 +453,8 @@ const Independent: React.FC = () => {
                   return (
                     <Flex justify="space-between" align="center">
                       <Flex gap="small" align="center">
-                        {/* <Button style={iconStyle} type="text" icon={<LinkOutlined />} /> */}
-                        <AttachmentSender style={iconStyle} onSubmit={handleSend}/>
+                        <Button style={iconStyle} type="text" icon={<LinkOutlined />} />
+                        {/* <AttachmentSender style={iconStyle} onSubmit={handleSend}/> */}
                         <Divider type="vertical" />
                         Deep Thinking
                         <Switch size="small" />
