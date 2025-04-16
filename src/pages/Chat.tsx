@@ -9,6 +9,7 @@ import {
   useXChat,
   Suggestion,
   AttachmentsProps,
+  XStream
 } from "@ant-design/x";
 import type { BubbleProps } from '@ant-design/x';
 
@@ -41,13 +42,13 @@ import {
   Typography,
   Flex,
   type GetProp,
-  type GetRef ,
+  type GetRef,
   Space,
   theme,
 } from "antd";
 import { IFileType, getFileExtByName, getFileTypeByName } from "../Utils/utils";
 import { RcFile } from "antd/es/upload";
-import  MarkdownRenderer from "../components/MarkdownRenderer";
+import MarkdownRenderer from "../components/MarkdownRenderer";
 
 
 const renderMarkdown: BubbleProps['messageRender'] = (content) => (
@@ -117,7 +118,6 @@ const useStyle = createStyles(({ token, css }) => {
     chat: css`
       height: 100%;
       width: 100%;
-      max-width: 700px;
       margin: 0 auto;
       box-sizing: border-box;
       display: flex;
@@ -127,11 +127,16 @@ const useStyle = createStyles(({ token, css }) => {
     `,
     messages: css`
       flex: 1;
+      overflow-y: auto;
     `,
     placeholder: css`
       padding-top: 32px;
     `,
     sender: css`
+      position: fixed; bottom: 0; left: 0; right: 0
+      display: flex;
+      align-items: center;
+      border-top: 1px solid
       box-shadow: ${token.boxShadow};
     `,
     logo: css`
@@ -165,49 +170,63 @@ const useStyle = createStyles(({ token, css }) => {
   };
 });
 
+
+function mockReadableStream(content: string| undefined) {
+  const sseChunks: string[] = [];
+  let contentChunks = content?.match(/.{1,2}/g) || [];
+  for (let i = 0; i < contentChunks.length; i++) {
+    const sseEventPart = `event: message\ndata: {"id":"${i}","content":"${contentChunks[i]}"}\n\n`;
+    sseChunks.push(sseEventPart);
+  }
+
+  return new ReadableStream({
+    async start(controller) {
+      for (const chunk of sseChunks) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        controller.enqueue(new TextEncoder().encode(chunk));
+      }
+      controller.close();
+    },
+  });
+}
+
 const placeholderPromptsItems: GetProp<typeof Prompts, "items"> = [
   {
-    key: "1",
-    label: renderTitle(
-      <FireOutlined style={{ color: "#FF4D4F" }} />,
-      "Hot Topics"
-    ),
-    description: "What are you interested in?",
+    key: '1',
+    label: renderTitle(<FireOutlined style={{ color: '#FF4D4F' }} />, 'Hot Topics'),
+    description: 'What are you interested in?',
     children: [
       {
-        key: "1-1",
+        key: '1-1',
         description: `What's new in X?`,
       },
       {
-        key: "1-2",
+        key: '1-2',
         description: `What's AGI?`,
       },
       {
-        key: "1-3",
+        key: '1-3',
         description: `Where is the doc?`,
       },
     ],
   },
   {
-    key: "2",
-    label: renderTitle(
-      <ReadOutlined style={{ color: "#1890FF" }} />,
-      "Design Guide"
-    ),
-    description: "How to design a good product?",
+    key: '2',
+    label: renderTitle(<ReadOutlined style={{ color: '#1890FF' }} />, 'Design Guide'),
+    description: 'How to design a good product?',
     children: [
       {
-        key: "2-1",
+        key: '2-1',
         icon: <HeartOutlined />,
         description: `Know the well`,
       },
       {
-        key: "2-2",
+        key: '2-2',
         icon: <SmileOutlined />,
         description: `Set the AI role`,
       },
       {
-        key: "2-3",
+        key: '2-3',
         icon: <CommentOutlined />,
         description: `Express the feeling`,
       },
@@ -275,7 +294,7 @@ const rolesAsFunction = (bubbleData: BubbleProps, index: number) => {
 
 
 
-  // ==================== Style ====================
+// ==================== Style ====================
 
 const Independent: React.FC = () => {
   const { styles } = useStyle();
@@ -303,18 +322,99 @@ const Independent: React.FC = () => {
   >([]);
 
   // ==================== Runtime ====================
+
+
+  
   const [agent] = useXAgent({
-    request: async ({ message }, { onSuccess }) => {
-      onSuccess(`Mock success return. You said: ${message}`);
+    baseURL:"http://103.150.10.188:4000/scalar/v1",
+    dangerouslyApiKey:"",
+    model:"",
+    // request: async ({ message }, { onSuccess }) => {
+    //   onSuccess(`Mock success return. You said: ${message}`);
+    // },
+    // request: async ({ message }, { onSuccess, onUpdate }) => {
+    //   const cleanMessage = message?.replace(/[\uD800-\uDFFF]/g, ''); // 移除表情
+    //   const fullContent = `You typed: ${cleanMessage}`;
+
+    //   let currentContent = '';
+
+    //   const id = setInterval(() => {
+    //     currentContent = fullContent.slice(0, currentContent.length + 2);
+    //     onUpdate(currentContent);
+
+    //     if (currentContent === fullContent) {
+    //       clearInterval(id);
+    //       onSuccess(fullContent);
+    //     }
+    //   }, 100);
+
+    // },
+
+    request: async ({message,baseURL,model,dangerouslyApiKey}, { onSuccess, onUpdate }) => {
+      console.log(JSON.stringify({ message, model }));
+      const response = await fetch(`${baseURL}/api/endpoint`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${dangerouslyApiKey}`,
+        },
+        body: JSON.stringify({ message, model }),
+      });
+
+      //在这里发请求拿到
+      const stream = XStream({
+        readableStream: mockReadableStream('U typed:'+ message),
+      });
+
+      // const stream = XStream({
+      //   readableStream: response.body ?? new ReadableStream(),
+      // });
+
+      const reader = stream.getReader();
+      abortRef.current = () => {
+        reader?.cancel();
+      };
+
+      let current = '';
+      while (reader) {
+        const { value, done } = await reader.read();
+        if (done) {
+          onSuccess(current);
+          break;
+        }
+        if (!value) continue;
+        const data = JSON.parse(value.data);
+        current += data.content || '';
+        onUpdate(current);
+      }
     },
+   
+
+
   });
+
+
+  const { onRequest, messages, setMessages } = useXChat({
+    agent,
+    defaultMessages:[{
+      status: 'local',
+      message:"Hi, What i can help u?"
+    }],
+  });
+
   const iconStyle = {
     fontSize: 18,
     color: token.colorText,
   };
-  const { onRequest, messages, setMessages } = useXChat({
-    agent,
-  });
+  
+
+  const abortRef = React.useRef(() => { });
+
+  useEffect(() => {
+    return () => {
+      abortRef.current();
+    };
+  }, []);
 
   useEffect(() => {
     if (activeKey !== undefined) {
@@ -324,8 +424,7 @@ const Independent: React.FC = () => {
 
   // ==================== Event ====================
   const onSubmit = (nextContent: string) => {
-    console.log('next content is： ',nextContent);
-
+    console.log(messages);
     if (!nextContent) return;
     onRequest(nextContent);
     setContent("");
@@ -380,8 +479,8 @@ const Independent: React.FC = () => {
       <Welcome
         variant="borderless"
         icon="https://mdn.alipayobjects.com/huamei_iwk9zp/afts/img/A*s5sNRo5LjfQAAAAAAAAAAAAADgCCAQ/fmt.webp"
-        title="Hello, I'm Ant Design X"
-        description="Base on Ant Design, AGI product interface solution, create a better intelligent vision~"
+        title={"Hello, I'm Dify Chat"}
+				description="Base on Dify API, Dify Chat is a web app that can interact with AI."
         extra={
           <Space>
             <Button icon={<ShareAltOutlined />} />
@@ -473,7 +572,7 @@ const Independent: React.FC = () => {
     ({ id, message, status }) => ({
       key: id,
       loading: status === "loading",
-      role: status === "local" ? "local" : "ai",
+      role: status === "success" ? "ai" : "user",
       content: message,
     })
   );
@@ -511,10 +610,10 @@ const Independent: React.FC = () => {
           type === "drop"
             ? { title: "Drop file here" }
             : {
-                icon: <CloudUploadOutlined />,
-                title: "Upload files",
-                description: "Click or drag files to this area to upload",
-              }
+              icon: <CloudUploadOutlined />,
+              title: "Upload files",
+              description: "Click or drag files to this area to upload",
+            }
         }
       />
     </Sender.Header>
@@ -558,7 +657,7 @@ const Independent: React.FC = () => {
       <div className={styles.chat}>
         {/* 🌟 消息列表 */}
         <Bubble.List
-          items={
+           items={
             items.length > 0? items: [{ content: placeholderNode, variant: "borderless" }]
           }
         
@@ -573,13 +672,14 @@ const Independent: React.FC = () => {
         <Suggestion
           items={suggestions}
           onSelect={(itemVal) => {
-            //setContent(`[${itemVal}]:`);
+            setContent(`[${itemVal}]:`);
           }}
           block
         >
           {({ onTrigger, onKeyDown }) => {
             return (
               <Sender
+                loading={agent.isRequesting()}
                 header={senderHeader}
                 value={content}
                 onChange={(nextVal) => {
@@ -616,7 +716,7 @@ const Independent: React.FC = () => {
                         <Divider type="vertical" />
                         <Button icon={<SearchOutlined />}>Global Search</Button>
                       </Flex>
-                      <Flex  align="center">
+                      <Flex align="center">
                         <ClearButton style={iconStyle} />
                         <Divider type="vertical" />
                         {/* <Button
@@ -627,7 +727,7 @@ const Independent: React.FC = () => {
                         <Divider type="vertical" /> */}
                         <SpeechButton style={iconStyle} />
                         <Divider type="vertical" />
-                        {loading ? (
+                        {agent.isRequesting() ? (
                           <LoadingButton type="default" />
                         ) : (
                           <SendButton type="primary" disabled={false} />
@@ -638,7 +738,8 @@ const Independent: React.FC = () => {
                 }}
                 onSubmit={onSubmit}
                 onCancel={() => {
-                  setLoading(false);
+                  () => abortRef.current()
+                  // setLoading(false);
                 }}
                 actions={false}
               />

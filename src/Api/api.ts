@@ -314,9 +314,9 @@ export class DifyApi {
 	  
 		  return Promise.resolve(mockResponse);
 		  // 在开发/测试环境下直接返回模拟数据
-		  if (process.env.NODE_ENV === "development") {
+		//   if (process.env.NODE_ENV === "development") {
 			
-		  }
+		//   }
 
 		//return this.baseRequest.get('/info') as Promise<IGetAppInfoResponse>
 	}
