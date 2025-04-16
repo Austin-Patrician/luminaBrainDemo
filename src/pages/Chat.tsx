@@ -8,11 +8,18 @@ import {
   useXAgent,
   useXChat,
   Suggestion,
-  AttachmentsProps
-} from '@ant-design/x';
-import { createStyles } from 'antd-style';
-import React, { useEffect } from 'react';
-import { ApiOutlined, SearchOutlined, RobotOutlined, UserOutlined } from '@ant-design/icons';
+  AttachmentsProps,
+} from "@ant-design/x";
+import type { BubbleProps } from '@ant-design/x';
+
+import { createStyles } from "antd-style";
+import React, { useEffect } from "react";
+import {
+  ApiOutlined,
+  SearchOutlined,
+  RobotOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 import {
   CloudUploadOutlined,
   CommentOutlined,
@@ -24,10 +31,31 @@ import {
   ReadOutlined,
   ShareAltOutlined,
   SmileOutlined,
-} from '@ant-design/icons';
-import { Badge, Button, Divider, Switch, Typography, Flex, type GetProp, Space, theme } from 'antd';
-import { IFileType, getFileExtByName, getFileTypeByName } from '../Utils/utils'
-import { RcFile } from 'antd/es/upload'
+} from "@ant-design/icons";
+
+import {
+  Badge,
+  Button,
+  Divider,
+  Switch,
+  Typography,
+  Flex,
+  type GetProp,
+  type GetRef ,
+  Space,
+  theme,
+} from "antd";
+import { IFileType, getFileExtByName, getFileTypeByName } from "../Utils/utils";
+import { RcFile } from "antd/es/upload";
+import  MarkdownRenderer from "../components/MarkdownRenderer";
+
+
+const renderMarkdown: BubbleProps['messageRender'] = (content) => (
+  <Typography>
+    {/* biome-ignore lint/security/noDangerouslySetInnerHtml: used in demo */}
+    <MarkdownRenderer content={content}></MarkdownRenderer>
+  </Typography>
+);
 
 const renderTitle = (icon: React.ReactElement, title: string) => (
   <Space align="start">
@@ -38,145 +66,148 @@ const renderTitle = (icon: React.ReactElement, title: string) => (
 
 const defaultConversationsItems = [
   {
-    key: '0',
-    label: 'What is Ant Design X?',
+    key: "0",
+    label: "What is Ant Design X?",
   },
 ];
-
 
 /**
  * Dify 支持的文件类型和对应的格式
  */
-export const FileTypeMap: Map<IFileType, string[]> = new Map()
+export const FileTypeMap: Map<IFileType, string[]> = new Map();
 
-
-
-type SuggestionItems = Exclude<GetProp<typeof Suggestion, 'items'>, () => void>;
+type SuggestionItems = Exclude<GetProp<typeof Suggestion, "items">, () => void>;
 const suggestions: SuggestionItems = [
-  { label: 'Write a report', value: 'report' },
-  { label: 'Draw a picture', value: 'draw' },
+  { label: "Write a report", value: "report" },
+  { label: "Draw a picture", value: "draw" },
   {
-    label: 'Check some knowledge',
-    value: 'knowledge',
-    extra: 'Extra Info',
+    label: "Check some knowledge",
+    value: "knowledge",
+    extra: "Extra Info",
   },
 ];
 
 const useStyle = createStyles(({ token, css }) => {
   return {
     layout: css`
-        width: 100%;
-        min-width: 1000px;
-        height: 722px;
-        border-radius: ${token.borderRadius}px;
-        display: flex;
-        background: ${token.colorBgContainer};
-        font-family: AlibabaPuHuiTi, ${token.fontFamily}, sans-serif;
-  
-        .ant-prompts {
-          color: ${token.colorText};
-        }
-      `,
+      width: 100%;
+      min-width: 1000px;
+      height: 722px;
+      border-radius: ${token.borderRadius}px;
+      display: flex;
+      background: ${token.colorBgContainer};
+      font-family: AlibabaPuHuiTi, ${token.fontFamily}, sans-serif;
+
+      .ant-prompts {
+        color: ${token.colorText};
+      }
+    `,
     menu: css`
-        background: ${token.colorBgLayout}80;
-        width: 280px;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-      `,
+      background: ${token.colorBgLayout}80;
+      width: 280px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    `,
     conversations: css`
         width: 256,
     background: token.colorBgContainer,
     borderRadius: token.borderRadius,
       `,
     chat: css`
-        height: 100%;
-        width: 100%;
-        max-width: 700px;
-        margin: 0 auto;
-        box-sizing: border-box;
-        display: flex;
-        flex-direction: column;
-        padding: ${token.paddingLG}px;
-        gap: 16px;
-      `,
+      height: 100%;
+      width: 100%;
+      max-width: 700px;
+      margin: 0 auto;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      padding: ${token.paddingLG}px;
+      gap: 16px;
+    `,
     messages: css`
-        flex: 1;
-      `,
+      flex: 1;
+    `,
     placeholder: css`
-        padding-top: 32px;
-      `,
+      padding-top: 32px;
+    `,
     sender: css`
-        box-shadow: ${token.boxShadow};
-      `,
+      box-shadow: ${token.boxShadow};
+    `,
     logo: css`
-        display: flex;
-        height: 72px;
-        align-items: center;
-        justify-content: start;
-        padding: 0 24px;
-        box-sizing: border-box;
-  
-        img {
-          width: 24px;
-          height: 24px;
-          display: inline-block;
-        }
-  
-        span {
-          display: inline-block;
-          margin: 0 8px;
-          font-weight: bold;
-          color: ${token.colorText};
-          font-size: 16px;
-        }
-      `,
+      display: flex;
+      height: 72px;
+      align-items: center;
+      justify-content: start;
+      padding: 0 24px;
+      box-sizing: border-box;
+
+      img {
+        width: 24px;
+        height: 24px;
+        display: inline-block;
+      }
+
+      span {
+        display: inline-block;
+        margin: 0 8px;
+        font-weight: bold;
+        color: ${token.colorText};
+        font-size: 16px;
+      }
+    `,
     addBtn: css`
-        background: #1677ff0f;
-        border: 1px solid #1677ff34;
-        width: calc(100% - 24px);
-        margin: 0 12px 24px 12px;
-      `,
+      background: #1677ff0f;
+      border: 1px solid #1677ff34;
+      width: calc(100% - 24px);
+      margin: 0 12px 24px 12px;
+    `,
   };
 });
 
-const placeholderPromptsItems: GetProp<typeof Prompts, 'items'> = [
+const placeholderPromptsItems: GetProp<typeof Prompts, "items"> = [
   {
-    key: '1',
-    label: renderTitle(<FireOutlined style={{ color: '#FF4D4F' }} />, 'Hot Topics'),
-    description: 'What are you interested in?',
+    key: "1",
+    label: renderTitle(
+      <FireOutlined style={{ color: "#FF4D4F" }} />,
+      "Hot Topics"
+    ),
+    description: "What are you interested in?",
     children: [
       {
-        key: '1-1',
+        key: "1-1",
         description: `What's new in X?`,
       },
       {
-        key: '1-2',
+        key: "1-2",
         description: `What's AGI?`,
       },
       {
-        key: '1-3',
+        key: "1-3",
         description: `Where is the doc?`,
       },
     ],
   },
   {
-    key: '2',
-    label: renderTitle(<ReadOutlined style={{ color: '#1890FF' }} />, 'Design Guide'),
-    description: 'How to design a good product?',
+    key: "2",
+    label: renderTitle(
+      <ReadOutlined style={{ color: "#1890FF" }} />,
+      "Design Guide"
+    ),
+    description: "How to design a good product?",
     children: [
       {
-        key: '2-1',
+        key: "2-1",
         icon: <HeartOutlined />,
         description: `Know the well`,
       },
       {
-        key: '2-2',
+        key: "2-2",
         icon: <SmileOutlined />,
         description: `Set the AI role`,
       },
       {
-        key: '2-3',
+        key: "2-3",
         icon: <CommentOutlined />,
         description: `Express the feeling`,
       },
@@ -184,47 +215,69 @@ const placeholderPromptsItems: GetProp<typeof Prompts, 'items'> = [
   },
 ];
 
-const senderPromptsItems: GetProp<typeof Prompts, 'items'> = [
+const senderPromptsItems: GetProp<typeof Prompts, "items"> = [
   {
-    key: '1',
-    description: 'Hot Topics',
-    icon: <FireOutlined style={{ color: '#FF4D4F' }} />,
+    key: "1",
+    description: "Hot Topics",
+    icon: <FireOutlined style={{ color: "#FF4D4F" }} />,
   },
   {
-    key: '2',
-    description: 'Design Guide',
-    icon: <ReadOutlined style={{ color: '#1890FF' }} />,
+    key: "2",
+    description: "Design Guide",
+    icon: <ReadOutlined style={{ color: "#1890FF" }} />,
   },
 ];
-
-const roles: GetProp<typeof Bubble.List, 'roles'> = {
+// ==================== 对话气泡头像 ==================== 
+const rolesAsObject: GetProp<typeof Bubble.List, 'roles'> = {
   ai: {
     placement: 'start',
-    avatar: { icon: <RobotOutlined />, style: { background: '#fde3cf' } },
+    avatar: { icon: <UserOutlined />, style: { background: '#fde3cf' } },
+    typing: { step: 5, interval: 20 },
     style: {
-      // 减去一个头像的宽度
-      maxWidth: 'calc(100% - 44px)',
+      maxWidth: 600,
     },
   },
   user: {
     placement: 'end',
-    avatar: {
-      icon: <UserOutlined />,
-      style: {
-        background: '#87d068',
-      },
-    }
-    ,
-    style: {
-      // 减去一个头像的宽度
-      maxWidth: 'calc(100% - 44px)',
-      marginLeft: '44px',
-    },
+    avatar: { icon: <UserOutlined />, style: { background: '#87d068' } },
   },
-}
+};
+
+const rolesAsFunction = (bubbleData: BubbleProps, index: number) => {
+  const RenderIndex: BubbleProps['messageRender'] = (content) => (
+    <Flex>
+      #{index}: {content}
+    </Flex>
+  );
+  switch (bubbleData.role) {
+    case 'ai':
+      return {
+        placement: 'start' as const,
+        avatar: { icon: <UserOutlined />, style: { background: '#fde3cf' } },
+        typing: { step: 5, interval: 20 },
+        style: {
+          maxWidth: 600,
+        },
+        messageRender: RenderIndex,
+      };
+    case 'user':
+      return {
+        placement: 'end' as const,
+        avatar: { icon: <UserOutlined />, style: { background: '#87d068' } },
+        messageRender: RenderIndex,
+      };
+    default:
+      return { messageRender: RenderIndex };
+  }
+};
+
+// ==================== 对话气泡头像 ==================== 
+
+
+
+  // ==================== Style ====================
 
 const Independent: React.FC = () => {
-  // ==================== Style ====================
   const { styles } = useStyle();
   const { token } = theme.useToken();
 
@@ -232,15 +285,22 @@ const Independent: React.FC = () => {
   const [headerOpen, setHeaderOpen] = React.useState(false);
   const [loading, setLoading] = React.useState<boolean>(false);
 
-  const [content, setContent] = React.useState('');
+  const [content, setContent] = React.useState("");
 
-  const [conversationsItems, setConversationsItems] = React.useState(defaultConversationsItems);
+  const [useRolesAsFunction, setUseRolesAsFunction] = React.useState(false);
+  const listRef = React.useRef<GetRef<typeof Bubble.List>>(null);
 
-  const [activeKey, setActiveKey] = React.useState(defaultConversationsItems[0].key);
-
-  const [attachedFiles, setAttachedFiles] = React.useState<GetProp<typeof Attachments, 'items'>>(
-    [],
+  const [conversationsItems, setConversationsItems] = React.useState(
+    defaultConversationsItems
   );
+
+  const [activeKey, setActiveKey] = React.useState(
+    defaultConversationsItems[0].key
+  );
+
+  const [attachedFiles, setAttachedFiles] = React.useState<
+    GetProp<typeof Attachments, "items">
+  >([]);
 
   // ==================== Runtime ====================
   const [agent] = useXAgent({
@@ -264,12 +324,14 @@ const Independent: React.FC = () => {
 
   // ==================== Event ====================
   const onSubmit = (nextContent: string) => {
+    console.log('next content is： ',nextContent);
+
     if (!nextContent) return;
     onRequest(nextContent);
-    setContent('');
+    setContent("");
   };
 
-  const onPromptsItemClick: GetProp<typeof Prompts, 'onItemClick'> = (info) => {
+  const onPromptsItemClick: GetProp<typeof Prompts, "onItemClick"> = (info) => {
     onRequest(info.data.description as string);
   };
 
@@ -284,15 +346,17 @@ const Independent: React.FC = () => {
     setActiveKey(`${conversationsItems.length}`);
   };
 
-  const onConversationClick: GetProp<typeof Conversations, 'onActiveChange'> = (key) => {
+  const onConversationClick: GetProp<typeof Conversations, "onActiveChange"> = (
+    key
+  ) => {
     setActiveKey(key);
   };
 
-  const groupable: GetProp<typeof Conversations, 'groupable'> = {
+  const groupable: GetProp<typeof Conversations, "groupable"> = {
     sort(a, b) {
       if (a === b) return 0;
 
-      return a === 'Today' ? -1 : 1;
+      return a === "Today" ? -1 : 1;
     },
     title: (group, { components: { GroupTitle } }) =>
       group ? (
@@ -307,7 +371,7 @@ const Independent: React.FC = () => {
       ),
   };
 
-  const handleFileChange: GetProp<typeof Attachments, 'onChange'> = (info) =>
+  const handleFileChange: GetProp<typeof Attachments, "onChange"> = (info) =>
     setAttachedFiles(info.fileList);
 
   // ==================== Nodes ====================
@@ -330,7 +394,7 @@ const Independent: React.FC = () => {
         items={placeholderPromptsItems}
         styles={{
           list: {
-            width: '100%',
+            width: "100%",
           },
           item: {
             flex: 1,
@@ -341,48 +405,52 @@ const Independent: React.FC = () => {
     </Space>
   );
 
-  const [files, setFiles] = React.useState<GetProp<AttachmentsProps, 'items'>>([])
-  const [fileIdMap, setFileIdMap] = React.useState<Map<string, string>>(new Map())
+  const [files, setFiles] = React.useState<GetProp<AttachmentsProps, "items">>(
+    []
+  );
+  const [fileIdMap, setFileIdMap] = React.useState<Map<string, string>>(
+    new Map()
+  );
   const handleUpload = async (file: RcFile) => {
-    const prevFiles = [...files]
+    const prevFiles = [...files];
 
-    const fileBaseInfo: GetProp<AttachmentsProps, 'items'>[number] = {
+    const fileBaseInfo: GetProp<AttachmentsProps, "items">[number] = {
       uid: file.uid,
       name: file.name,
-      status: 'uploading',
+      status: "uploading",
       size: file.size,
       type: file.type,
       originFileObj: file,
-    }
+    };
     // 模拟上传进度
     const mockLoadingProgress = () => {
-      let percent = 0
+      let percent = 0;
       setFiles([
         ...prevFiles,
         {
           ...fileBaseInfo,
           percent: percent,
         },
-      ])
+      ]);
       const interval = setInterval(() => {
         if (percent >= 99) {
-          clearInterval(interval)
-          return
+          clearInterval(interval);
+          return;
         }
-        percent = percent + 1
+        percent = percent + 1;
         setFiles([
           ...prevFiles,
           {
             ...fileBaseInfo,
             percent,
           },
-        ])
-      }, 100)
+        ]);
+      }, 100);
       return {
         clear: () => clearInterval(interval),
-      }
-    }
-    const { clear } = mockLoadingProgress()
+      };
+    };
+    const { clear } = mockLoadingProgress();
 
     // const result = await uploadFileApi(file)
     // clear()
@@ -399,24 +467,17 @@ const Independent: React.FC = () => {
     // 	nextMap.set(file.uid, result.id)
     // 	return nextMap
     // })
-  }
-  const handleSend = (text: string, files: any[]) => {
-    console.log('Message:', text);
-    console.log('Files:', files);
   };
 
-  const items: GetProp<typeof Bubble.List, 'items'> = messages.map(({ id, message, status }) => ({
-    key: id,
-    loading: status === 'loading',
-    role: status === 'local' ? 'local' : 'ai',
-    content: message,
-  }));
-
-  const attachmentsNode = (
-    <Badge dot={attachedFiles.length > 0 && !headerOpen}>
-      <Button type="text" icon={<PaperClipOutlined />} onClick={() => setHeaderOpen(!headerOpen)} />
-    </Badge>
+  const items: GetProp<typeof Bubble.List, "items"> = messages.map(
+    ({ id, message, status }) => ({
+      key: id,
+      loading: status === "loading",
+      role: status === "local" ? "local" : "ai",
+      content: message,
+    })
   );
+
 
   const senderHeader = (
     <Sender.Header
@@ -430,32 +491,30 @@ const Independent: React.FC = () => {
       }}
     >
       <Attachments
-        beforeUpload={
-          async file => {
-            // 校验文件类型
-            // 自定义上传
+        beforeUpload={async (file) => {
+          // 校验文件类型
+          // 自定义上传
 
-            const ext = getFileExtByName(file.name)
-            // 校验文件类型
-            // if (allowedFileTypes.length > 0 && !allowedFileTypes.includes(ext!)) {
-            //   message.error(`不支持的文件类型: ${ext}`)
-            //   return false
-            // }
+          const ext = getFileExtByName(file.name);
+          // 校验文件类型
+          // if (allowedFileTypes.length > 0 && !allowedFileTypes.includes(ext!)) {
+          //   message.error(`不支持的文件类型: ${ext}`)
+          //   return false
+          // }
 
-            handleUpload(file)
-            return false
-          }
-        }
+          handleUpload(file);
+          return false;
+        }}
         items={attachedFiles}
         onChange={handleFileChange}
         placeholder={(type) =>
-          type === 'drop'
-            ? { title: 'Drop file here' }
+          type === "drop"
+            ? { title: "Drop file here" }
             : {
-              icon: <CloudUploadOutlined />,
-              title: 'Upload files',
-              description: 'Click or drag files to this area to upload',
-            }
+                icon: <CloudUploadOutlined />,
+                title: "Upload files",
+                description: "Click or drag files to this area to upload",
+              }
         }
       />
     </Sender.Header>
@@ -468,7 +527,7 @@ const Independent: React.FC = () => {
         draggable={false}
         alt="logo"
       />
-      <span>Ant Design X</span>
+      <span>LuminaBrain</span>
     </div>
   );
 
@@ -499,8 +558,13 @@ const Independent: React.FC = () => {
       <div className={styles.chat}>
         {/* 🌟 消息列表 */}
         <Bubble.List
-          items={items.length > 0 ? items : [{ content: placeholderNode, variant: 'borderless' }]}
-          roles={roles}
+          items={
+            items.length > 0? items: [{ content: placeholderNode, variant: "borderless" }]
+          }
+        
+          ref={listRef}
+          style={{ maxHeight: 300 }}
+          roles={useRolesAsFunction ? rolesAsFunction : rolesAsObject}
           className={styles.messages}
         />
         {/* 🌟 提示词 */}
@@ -509,7 +573,7 @@ const Independent: React.FC = () => {
         <Suggestion
           items={suggestions}
           onSelect={(itemVal) => {
-            setContent(`[${itemVal}]:`);
+            //setContent(`[${itemVal}]:`);
           }}
           block
         >
@@ -517,40 +581,50 @@ const Independent: React.FC = () => {
             return (
               <Sender
                 header={senderHeader}
-                prefix={
-                  attachmentsNode
-                }
                 value={content}
-                onChange={
-                  (nextVal) => {
-                    if (nextVal === '/') {
-                      onTrigger();
-                    } else if (!nextVal) {
-                      onTrigger(false);
-                    }
-                    setContent(nextVal);
-                  }}
+                onChange={(nextVal) => {
+                  if (nextVal === "/") {
+                    onTrigger();
+                  } else if (!nextVal) {
+                    onTrigger(false);
+                  }
+                  setContent(nextVal);
+                }}
                 autoSize={{ minRows: 2, maxRows: 6 }}
                 onKeyDown={onKeyDown}
                 placeholder="输入 / 获取建议"
                 footer={({ components }) => {
-                  const { SendButton, LoadingButton, ClearButton, SpeechButton } = components;
+                  const {
+                    SendButton,
+                    LoadingButton,
+                    ClearButton,
+                    SpeechButton,
+                  } = components;
                   return (
                     <Flex justify="space-between" align="center">
                       <Flex gap="small" align="center">
-                        {/* <Button style={iconStyle} type="text" icon={<LinkOutlined />} /> */}
-                        {/* <AttachmentSender style={iconStyle} onSubmit={handleSend}/> */}
+                        <Badge dot={attachedFiles.length > 0 && !headerOpen}>
+                          <Button
+                            type="text"
+                            icon={<PaperClipOutlined />}
+                            onClick={() => setHeaderOpen(!headerOpen)}
+                          />
+                        </Badge>
                         <Divider type="vertical" />
                         Deep Thinking
                         <Switch size="small" />
                         <Divider type="vertical" />
                         <Button icon={<SearchOutlined />}>Global Search</Button>
                       </Flex>
-                      <Flex align="center">
+                      <Flex  align="center">
                         <ClearButton style={iconStyle} />
                         <Divider type="vertical" />
-                        <Button type="text" style={iconStyle} icon={<ApiOutlined />} />
-                        <Divider type="vertical" />
+                        {/* <Button
+                          type="text"
+                          style={iconStyle}
+                          icon={<ApiOutlined />}
+                        />
+                        <Divider type="vertical" /> */}
                         <SpeechButton style={iconStyle} />
                         <Divider type="vertical" />
                         {loading ? (

@@ -7,8 +7,8 @@ import Independent from './pages/Chat';
 const App: React.FC = () => {
   return (
     <Router>
-      <Layout>
-        <Layout.Content style={{ padding: '24px', background: '#fff' }}>
+      <Layout style={{ height: '100vh', width: '100vw', margin: 0 }}>
+        <Layout.Content style={{ padding: 0, background: '#fff', height: '100%', width: '100%' }}>
           <Routes>
             <Route path="/" element={<Independent />} />
             {/* 可添加更多路由 */}
