@@ -12,7 +12,7 @@ import {
   XStream
 } from "@ant-design/x";
 import type { BubbleProps } from '@ant-design/x';
-
+import XRequest from '../Api/base-request'
 import { createStyles } from "antd-style";
 import React, { useEffect } from "react";
 import {
@@ -57,6 +57,18 @@ const renderMarkdown: BubbleProps['messageRender'] = (content) => (
     <MarkdownRenderer content={content}></MarkdownRenderer>
   </Typography>
 );
+
+interface IUserInputForm {
+	model: string,
+  messages: MessageRole[],
+  stream : boolean
+}
+
+interface MessageRole {
+	role: string
+	content: string | undefined
+}
+
 
 const renderTitle = (icon: React.ReactElement, title: string) => (
   <Space align="start">
@@ -326,9 +338,9 @@ const Independent: React.FC = () => {
 
   
   const [agent] = useXAgent({
-    baseURL:"http://103.150.10.188:4000/scalar/v1",
+    baseURL:"http://103.150.10.188:4000/chat/v1",
     dangerouslyApiKey:"",
-    model:"",
+    model:"gtp3.5",
     // request: async ({ message }, { onSuccess }) => {
     //   onSuccess(`Mock success return. You said: ${message}`);
     // },
@@ -350,25 +362,43 @@ const Independent: React.FC = () => {
 
     // },
 
-    request: async ({message,baseURL,model,dangerouslyApiKey}, { onSuccess, onUpdate }) => {
-      console.log(JSON.stringify({ message, model }));
-      const response = await fetch(`${baseURL}/api/endpoint`, {
+    request: async ({message}, { onSuccess, onUpdate,onError }) => {
+      console.log('xxixixi ',JSON.stringify({ message, model:'gpt3.5' }));
+
+      const userInputForm: IUserInputForm = {
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: message,
+          },
+        ],
+        stream: true
+      };
+      let request= new XRequest({
+        baseURL: 'https://api.openai.com/v1/chat/completions',
+        apiKey: '',
+      })
+
+  
+      const response = await fetch(`https://api.openai.com/v1/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${dangerouslyApiKey}`,
+          'Authorization': `Bearer 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`,
         },
-        body: JSON.stringify({ message, model }),
+        body: JSON.stringify({ userInputForm}),
       });
 
+  
       //在这里发请求拿到
-      const stream = XStream({
-        readableStream: mockReadableStream('U typed:'+ message),
-      });
-
       // const stream = XStream({
-      //   readableStream: response.body ?? new ReadableStream(),
+      //   readableStream: mockReadableStream('U typed:'+ message),
       // });
+
+      const stream = XStream({
+        readableStream: response.body ?? new ReadableStream(),
+      });
 
       const reader = stream.getReader();
       abortRef.current = () => {

@@ -1,18 +1,4 @@
 import { message } from 'antd'
-const DIFY_VERSION_KEY = 'DIFY_CHAT__DIFY_VERSION'
-
-/**
- * 获取 Dify 版本
- */
-export const DIFY_INFO = {
-	get version() {
-		return localStorage.getItem(DIFY_VERSION_KEY) || ''
-	},
-
-	set version(version: string) {
-		localStorage.setItem(DIFY_VERSION_KEY, version)
-	},
-}
 
 /**
  * 未授权错误类
@@ -43,13 +29,6 @@ export class XRequest {
 				Authorization: `Bearer ${this.options.apiKey}`,
 			},
 		})
-		if (result.headers.get('X-Version')) {
-			const newDifyVersion = result.headers.get('X-Version')
-			// 比较本地缓存的版本和当前版本
-			if (newDifyVersion && newDifyVersion !== DIFY_INFO.version) {
-				DIFY_INFO.version = newDifyVersion
-			}
-		}
 		if (result.status === 401) {
 			message.error('未授权, 请检查你的配置')
 			throw new UnauthorizedError('Unauthorized')
